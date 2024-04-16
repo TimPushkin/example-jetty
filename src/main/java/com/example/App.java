@@ -1,9 +1,12 @@
 package com.example;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Date;
 
 import org.crac.Context;
 import org.crac.Core;
@@ -40,20 +43,53 @@ class ServerManager implements Resource {
 public class App extends AbstractHandler
 {
     static ServerManager serverManager;
+    static boolean shouldCheckpoint = false;
+
+    private static final DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
+    private static final Date appStartDate = new Date(System.currentTimeMillis());
 
     public void handle(String target,
                        Request baseRequest,
                        HttpServletRequest request,
                        HttpServletResponse response)
         throws IOException {
-        response.setContentType("text/html;charset=utf-8");
-        response.setStatus(HttpServletResponse.SC_OK);
-        baseRequest.setHandled(true);
-        response.getWriter().println("Hello World");
+        switch (target) {
+            case "/":
+                response.setContentType("text/html; charset=utf-8");
+                response.setStatus(HttpServletResponse.SC_OK);
+                final var currentDate = new Date(System.currentTimeMillis());
+                response.getWriter().println("<p>App started at:\t" + dateFormat.format(appStartDate) + "</p>");
+                response.getWriter().println("<p>Current time:\t" + dateFormat.format(currentDate) + "</p>");
+                baseRequest.setHandled(true);
+                break;
+            case "/checkpoint":
+                response.setContentType("text/html; charset=utf-8");
+                response.setStatus(HttpServletResponse.SC_OK);
+                response.getWriter().println("<p>Checkpointing...</p>");
+                baseRequest.setHandled(true);
+                shouldCheckpoint = true;
+                synchronized (serverManager) {
+                    serverManager.notifyAll();
+                }
+                break;
+        }
     }
 
     public static void main( String[] args ) throws Exception {
         serverManager = new ServerManager(8080, new App());
-        serverManager.server.join();
+        while (true) {
+            synchronized (serverManager) {
+                serverManager.wait();
+            }
+            if (shouldCheckpoint) {
+                try {
+                    Core.checkpointRestore();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+                    shouldCheckpoint = false;
+                }
+            }
+        }
     }
 }
