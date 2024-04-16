@@ -3,7 +3,6 @@ package com.example;
 import java.util.Arrays;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.ServletException;
 import java.io.IOException;
 
 import org.crac.Context;
@@ -20,7 +19,7 @@ class ServerManager implements Resource {
     Server server;
 
     public ServerManager(int port, Handler handler) throws Exception {
-        server = new Server(8080);
+        server = new Server(port);
         server.setHandler(handler);
         server.start();
         Core.getGlobalContext().register(this);
