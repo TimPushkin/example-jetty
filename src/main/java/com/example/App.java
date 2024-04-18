@@ -17,6 +17,8 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.eclipse.jetty.util.component.LifeCycle;
+import org.eclipse.jetty.util.log.Log;
+import org.eclipse.jetty.util.log.Logger;
 
 class ServerManager implements Resource {
     Server server;
@@ -42,6 +44,8 @@ class ServerManager implements Resource {
 
 public class App extends AbstractHandler
 {
+    private static final Logger LOG = Log.getLogger(App.class);
+
     static ServerManager serverManager;
     static boolean shouldCheckpoint = false;
 
@@ -53,6 +57,7 @@ public class App extends AbstractHandler
                        HttpServletRequest request,
                        HttpServletResponse response)
         throws IOException {
+        LOG.info("Handling target: " + target);
         switch (target) {
             case "/":
                 response.setContentType("text/html; charset=utf-8");
@@ -83,9 +88,11 @@ public class App extends AbstractHandler
             }
             if (shouldCheckpoint) {
                 try {
+                    LOG.info("Initiating checkpoint");
                     Core.checkpointRestore();
+                    LOG.info("Restored");
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    LOG.warn("C/R failed", e);
                 } finally {
                     shouldCheckpoint = false;
                 }
