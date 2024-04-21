@@ -50,7 +50,8 @@ public class App extends AbstractHandler
     static boolean shouldCheckpoint = false;
 
     private static final DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
-    private static final Date appStartDate = new Date(System.currentTimeMillis());
+    private static final Date launchDate = new Date(System.currentTimeMillis());
+    private static Date restoreDate = null;
 
     public void handle(String target,
                        Request baseRequest,
@@ -63,8 +64,14 @@ public class App extends AbstractHandler
                 response.setContentType("text/html; charset=utf-8");
                 response.setStatus(HttpServletResponse.SC_OK);
                 final var currentDate = new Date(System.currentTimeMillis());
-                response.getWriter().println("<p>App started at:\t" + dateFormat.format(appStartDate) + "</p>");
-                response.getWriter().println("<p>Current time:\t" + dateFormat.format(currentDate) + "</p>");
+                final var writer = response.getWriter();
+                writer.print("<p>");
+                writer.println("Launched: " + dateFormat.format(launchDate));
+                writer.print("<br>");
+                writer.println("Restored: " + (restoreDate != null ? dateFormat.format(restoreDate) : "never"));
+                writer.print("<br>");
+                writer.println("Now: " + dateFormat.format(currentDate));
+                writer.print("</p>");
                 baseRequest.setHandled(true);
                 break;
             case "/checkpoint":
@@ -90,6 +97,7 @@ public class App extends AbstractHandler
                 try {
                     LOG.info("Initiating checkpoint");
                     Core.checkpointRestore();
+                    restoreDate = new Date(System.currentTimeMillis());
                     LOG.info("Restored");
                 } catch (Exception e) {
                     LOG.warn("C/R failed", e);
