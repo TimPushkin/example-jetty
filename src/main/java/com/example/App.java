@@ -15,6 +15,7 @@ import org.crac.Resource;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.eclipse.jetty.util.component.LifeCycle;
 import org.eclipse.jetty.util.log.Log;
@@ -23,8 +24,12 @@ import org.eclipse.jetty.util.log.Logger;
 class ServerManager implements Resource {
     Server server;
 
-    public ServerManager(int port, Handler handler) throws Exception {
-        server = new Server(port);
+    private static int getPort() {
+        return Integer.parseInt(System.getProperty("port", "8080"));
+    }
+
+    public ServerManager(Handler handler) throws Exception {
+        server = new Server(getPort());
         server.setHandler(handler);
         server.start();
         Core.getGlobalContext().register(this);
@@ -38,7 +43,10 @@ class ServerManager implements Resource {
 
     @Override
     public void afterRestore(Context<? extends Resource> context) {
-        Arrays.asList(server.getConnectors()).forEach(c -> LifeCycle.start(c));
+        Arrays.asList(server.getConnectors()).forEach(c -> {
+            if (c instanceof ServerConnector) ((ServerConnector) c).setPort(getPort());
+            LifeCycle.start(c);
+        });
     }
 }
 
@@ -88,7 +96,7 @@ public class App extends AbstractHandler
     }
 
     public static void main( String[] args ) throws Exception {
-        serverManager = new ServerManager(8080, new App());
+        serverManager = new ServerManager(new App());
         while (true) {
             synchronized (serverManager) {
                 serverManager.wait();
